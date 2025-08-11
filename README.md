@@ -161,3 +161,7 @@ Upsert strategy based on IP address to avoid duplicates.
     "$date": "2025-08-11T17:59:37.759Z"
   }
 }
+
+## Example Output
+![Example Shodan ETL Output](images/example_output.png)
+![Example Shodan ETL Output](images/example_output_2.png)
