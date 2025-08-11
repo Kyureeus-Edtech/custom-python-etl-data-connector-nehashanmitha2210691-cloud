@@ -4,6 +4,7 @@ from datetime import datetime
 import requests
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
+from datetime import timezone
 
 # -------------------
 # Load env variables
@@ -25,10 +26,21 @@ collection = db[f"{CONNECTOR_NAME}_raw"]
 # List of IPs to fetch
 # -------------------
 IP_LIST = [
+    '''
     "8.8.8.8",       # Google DNS
     "1.1.1.1",       # Cloudflare DNS
     "9.9.9.9",       # Quad9 DNS
-    "208.67.222.222" # OpenDNS
+    "208.67.222.222", # OpenDNS
+    "151.101.1.69",   #Fastly CDN
+    "104.26.2.33",     #Cloudflare site
+    "13.107.42.12", #Microsoft'''
+    "172.217.164.110", #google web endpoint
+    "192.0.66.2", #wordpress.com
+    "151.101.129.69", #stack overflow via Fastly
+    "23.35.112.101", #Akamai edge mode
+    "91.189.91.39", #ubuntu archive server
+    "129.250.35.250", #NIT Comm
+    "185.199.108.153", #github pages
 ]
 
 # -------------------
@@ -37,9 +49,19 @@ IP_LIST = [
 def extract_shodan_data(ip: str):
     """Fetch raw Shodan data for a given IP"""
     url = f"https://api.shodan.io/shodan/host/{ip}?key={SHODAN_API_KEY}"
-    response = requests.get(url, timeout=15)
+    '''response = requests.get(url, timeout=60)
     if response.status_code != 200:
         raise Exception(f"Error {response.status_code} for IP {ip}: {response.text}")
+    return response.json()'''
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=90)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.ReadTimeout:
+            print(f"Timeout for {ip}, retrying ({attempt+1}/3)...")
+            time.sleep(5)
+    raise Exception(f"Failed after retries for {ip}")
     return response.json()
 
 # -------------------
@@ -58,7 +80,7 @@ def transform_shodan_data(raw: dict):
         "open_ports_count": len(raw.get("data", [])),
         "ports": sorted([service.get("port") for service in raw.get("data", []) if service.get("port")]),
         "services": [],
-        "ingested_at": datetime.utcnow(),
+        "ingested_at": datetime.now(timezone.utc),
         "source": "shodan_host_api"
     }
 
@@ -108,7 +130,7 @@ def run_etl():
             print(f"Inserted/Updated: {ip}")
         except Exception as e:
             print(f"Failed for {ip}: {e}")
-        time.sleep(1)  # Respect Shodan free-tier rate limit
+            time.sleep(3)  # Respect Shodan free-tier rate limit
 
 if __name__ == "__main__":
     run_etl()
