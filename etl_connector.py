@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
@@ -56,6 +56,15 @@ def extract_shodan_data(ip: str):
         try:
             response = requests.get(url, timeout=90)
             response.raise_for_status()
+            # Handle rate limiting
+            if response.status_code == 429:
+                print("Rate limit hit, sleeping 60 seconds...")
+                time.sleep(60)
+                continue
+            # Handle invalid responses
+            if response.status_code != 200:
+                print(f"Error {response.status_code} for {ip}: {response.text}")
+                return None
             return response.json()
         except requests.exceptions.ReadTimeout:
             print(f"Timeout for {ip}, retrying ({attempt+1}/3)...")
@@ -68,6 +77,11 @@ def extract_shodan_data(ip: str):
 # -------------------
 def transform_shodan_data(raw: dict):
     """Flatten and clean Shodan JSON for MongoDB"""
+    if not raw.get("data"):
+        print(f"No services found for {raw.get('ip_str')}, skipping insert.")
+        return None
+
+
     transformed = {
         "ip": raw.get("ip_str"),
         "organization": raw.get("org"),
@@ -80,6 +94,7 @@ def transform_shodan_data(raw: dict):
         "ports": sorted([service.get("port") for service in raw.get("data", []) if service.get("port")]),
         "services": [],
         "ingested_at": datetime.now(timezone.utc),
+        "last_updated_at": datetime.now(timezone.utc),
         "source": "shodan_host_api"
     }
 
