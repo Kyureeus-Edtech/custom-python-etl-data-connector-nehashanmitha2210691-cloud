@@ -26,14 +26,13 @@ collection = db[f"{CONNECTOR_NAME}_raw"]
 # List of IPs to fetch
 # -------------------
 IP_LIST = [
-    '''
     "8.8.8.8",       # Google DNS
     "1.1.1.1",       # Cloudflare DNS
     "9.9.9.9",       # Quad9 DNS
     "208.67.222.222", # OpenDNS
     "151.101.1.69",   #Fastly CDN
     "104.26.2.33",     #Cloudflare site
-    "13.107.42.12", #Microsoft'''
+    "13.107.42.12", #Microsoft
     "172.217.164.110", #google web endpoint
     "192.0.66.2", #wordpress.com
     "151.101.129.69", #stack overflow via Fastly
