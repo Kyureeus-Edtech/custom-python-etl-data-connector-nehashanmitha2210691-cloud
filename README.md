@@ -1,135 +1,209 @@
-# SSN-college-software-architecture-Assignments-
-Assignment repository for building custom Python ETL data connectors (Kyureeus EdTech, SSN CSE). Students: Submit your ETL scripts here. Make sure your commit message includes your name and roll number.
-# Software Architecture Assignment: Custom Python ETL Data Connector
+# Shodan ETL Connector
 
-Welcome to the official repository for submitting your Software Architecture assignment on building custom data connectors (ETL pipelines) in Python. This assignment is part of the Kyureeus EdTech program for SSN CSE students.
-
----
-Guideline: Building and Managing Custom Data Connectors (ETL Pipeline) in Python
-
-1. Setting Up the Connector Environment
-a. Choose Your API Provider: Identify a data provider and understand its Base URL, Endpoints, and Authentication.
-b. Understand the API Documentation: Focus on headers, query params, pagination, rate limits, and response structure.
-
-
-2. Secure API Authentication Using Environment Variables
-a. Create a `.env` File Locally: Store API keys and secrets as KEY=VALUE pairs.
-b. Load Environment Variables in Code: Use libraries like `dotenv` to securely load environment variables.
-
-
-3. Design the ETL Pipeline
-Extract: Connect to the API, pass tokens/headers, and collect JSON data.
-Transform: Clean or reformat the data for MongoDB compatibility.
-Load: Store the transformed data into a MongoDB collection.
-
-
-4. MongoDB Collection Strategy
-Use one collection per connector, e.g., `connector_name_raw`.
-Store ingestion timestamps to support audits or updates.
-
-
-5. Iterative Testing & Validation
-Test for invalid responses, empty payloads, rate limits, and connectivity errors.
-Ensure consistent insertion into MongoDB.
-
-
-6. Git and Project Structure Guidelines
-a. Use a Central Git Repository: Clone the shared repo and create a new branch for your connector.
-b. Ignore Secrets: Add `.env` to `.gitignore` before the first commit.
-c. Push and Document: Write README.md with endpoint details, API usage, and example output.
-
-
-Final Checklist for Students
-Understand API documentation
-Secure credentials in `.env`
-Build complete ETL script
-Validate MongoDB inserts
-Push code to your branch
-Include descriptive README
-Submit Pull Request
-
-## 📋 Assignment Overview
-
-**Goal:**  
-Develop a Python script to connect with an API provider, extract data, transform it for compatibility, and load it into a MongoDB collection. Follow secure coding and project structure practices as outlined below.
+**Author:** Neha Shanmitha (Roll No: 3122225001080)
 
 ---
 
-## ✅ Submission Checklist
-
-- [ ] Choose a data provider (API) and understand its documentation
-- [ ] Secure all API credentials using a `.env` file
-- [ ] Build a complete ETL pipeline: Extract → Transform → Load (into MongoDB)
-- [ ] Test and validate your pipeline (handle errors, invalid data, rate limits, etc.)
-- [ ] Follow the provided Git project structure
-- [ ] Write a clear and descriptive `README.md` in your folder with API details and usage instructions
-- [ ] **Include your name and roll number in your commit messages**
-- [ ] Push your code to your branch and submit a Pull Request
+## 📌 Overview
+This ETL connector fetches data from the **Shodan Host API** for a list of IP addresses, transforms the nested JSON into a MongoDB-friendly format, and stores it in a dedicated MongoDB collection. It is designed for secure API key management, robust error handling, and repeatable ingestion without duplicates.
 
 ---
 
-## 📦 Project Structure
+## 🌐 API Details
+- **Provider:** Shodan
+- **Base URL:** `https://api.shodan.io`
+- **Endpoint:** `/shodan/host/{ip}`
+- **Method:** `GET`
+- **Authentication:** API key passed as query parameter (`?key=YOUR_API_KEY`)
+- **Documentation:** [https://developer.shodan.io/api](https://developer.shodan.io/api)
+- **Example Request:** https://api.shodan.io/shodan/host/8.8.8.8?key=API_KEY
 
-/your-branch-name/
-├── etl_connector.py
-├── .env
-├── requirements.txt
-├── README.md
-└── (any additional scripts or configs)
-
-
-- **`.env`**: Store sensitive credentials; do **not** commit this file.
-- **`etl_connector.py`**: Your main ETL script.
-- **`requirements.txt`**: List all Python dependencies.
-- **`README.md`**: Instructions for your connector.
 
 ---
 
-## 🛡️ Secure Authentication
-
-- Store all API keys/secrets in a local `.env` file.
-- Load credentials using the `dotenv` Python library.
-- Add `.env` to `.gitignore` before committing.
-
----
-
-## 🗃️ MongoDB Guidelines
-
-- Use one MongoDB collection per connector (e.g., `connectorname_raw`).
-- Store ingestion timestamps for audit and update purposes.
+## 🔑 Authentication & Security
+1. Signing up at [https://account.shodan.io/register](https://account.shodan.io/register) to get API key.
+2. Storing it in a local `.env` file (not committed to Git).
+3. Example `.env`:
+    ```
+    SHODAN_API_KEY=api_key
+    MONGO_URI=mongodb://localhost:27017
+    MONGO_DB=ssn_etl
+    CONNECTOR_NAME=shodan_connector
+    ```
 
 ---
 
-## 🧪 Testing & Validation
+## MongoDB Storage Strategy
+Collection name: shodan_connector_raw
+Upsert strategy based on IP address to avoid duplicates.
 
-- Check for invalid responses, empty payloads, rate limits, and connectivity issues.
-- Ensure data is correctly inserted into MongoDB.
-
----
-
-## 📝 Git & Submission Guidelines
-
-1. **Clone the repository** and create your own branch.
-2. **Add your code and documentation** in your folder/branch.
-3. **Do not commit** your `.env` or secrets.
-4. **Write clear commit messages** (include your name and roll number).
-5. **Submit a Pull Request** when done.
+### Fields:
+- **ingested_at → First ingestion timestamp.**
+- **last_updated_at → Last update timestamp.**
+- **IP metadata (city, country, org, asn).**
+- **Service data (per open port).**
 
 ---
 
-## 💡 Additional Resources
+## Transformations Applied
+- **Flattened top-level metadata for easier querying.**
+- **Counted open ports.**
+- **Created sorted list of open ports.**
+- **Converted timestamps to timezone-aware datetimes.**
+- **Preserved service-level details.**
+- **Added ingestion and update metadata.**
 
-- [python-dotenv Documentation](https://saurabh-kumar.com/python-dotenv/)
-- [MongoDB Python Driver (PyMongo)](https://pymongo.readthedocs.io/en/stable/)
-- [API Documentation Example](https://restfulapi.net/)
+--- 
 
----
+## Testing & Validation
+- **Invalid API key/IP → Skips with error message.**
+```
+if response.status_code != 200:
+    print(f"Error {response.status_code} for {ip}: {response.text}")
+    return None
 
-## 📢 Need Help?
+```
+- **Empty payloads → Skips insert.**
+```
+if not raw.get("data"):
+    print(f"No services found for {raw.get('ip_str')}, skipping insert.")
+    return None
 
-- Post your queries in the [KYUREEUS/SSN College - WhatsApp group](#) .
-- Discuss issues, share progress, and help each other.
+```
+- **Rate limit (HTTP 429) → Waits 60 seconds, retries.**
+```
+if response.status_code == 429:
+    print("Rate limit hit, sleeping 60 seconds...")
+    time.sleep(60)
+    continue
+```
+- **Connectivity errors → Retries up to 3 times.**
+```
+for attempt in range(3):
+    try:
+        response = requests.get(url, timeout=60)
+        # ... (rate limit + invalid response handling here)
+        return response.json()
 
----
+    except requests.exceptions.Timeout:
+        print(f"Timeout for {ip}, retrying ({attempt+1}/3)...")
+        time.sleep(5)
 
-Happy coding! 🚀
+    except requests.exceptions.RequestException as e:
+        print(f"Network error for {ip}: {e}")
+        return None
+```
+- **Consistent inserts → Uses update_one(..., upsert=True).**
+```
+collection.update_one(
+    {"ip": doc["ip"]},   # match on IP to avoid duplicates
+    {"$set": doc},       # update fields with new data
+    upsert=True          # insert if doesn't exist
+)
+```
+
+## Input JSON:
+```
+{
+    "region_code": "CA",
+    "tags": [],
+    "ip": 134744072,
+    "area_code": null,
+    "domains": [
+        "dns.google"
+    ],
+    "hostnames": [
+        "dns.google"
+    ],
+    "country_code": "US",
+    "org": "Google LLC",
+    "data": [{...},... ],
+    "asn": "AS15169",
+    "city": "Mountain View",
+    "latitude": 38.00881,
+    "isp": "Google LLC",
+    "longitude": -122.11746,
+    "last_update": "2025-08-10T19:54:30.864225",
+    "country_name": "United States",
+    "ip_str": "8.8.8.8",
+    "os": null,
+    "ports": [
+        443,
+        53
+    ]
+}
+```
+## Output JSON:
+```
+{
+  "_id": {
+    "$oid": "6899af23d34128dcedf7053e"
+  },
+  "ip": "8.8.8.8",
+  "asn": "AS15169",
+  "city": "Mountain View",
+  "country_name": "United States",
+  "ingested_at": {
+    "$date": "2025-08-11T17:59:37.759Z"
+  },
+  "latitude": 38.00881,
+  "longitude": -122.11746,
+  "open_ports_count": 3,
+  "organization": "Google LLC",
+  "ports": [
+    53,
+    53,
+    443
+  ],
+  "services": [
+    {
+      "port": 53,
+      "transport": "tcp",
+      "product": null,
+      "asn": "AS15169",
+      "org": "Google LLC",
+      "service_timestamp": {
+        "$date": "2025-08-11T10:46:21.366Z"
+      },
+      "ssl_versions": []
+    },
+    {
+      "port": 53,
+      "transport": "udp",
+      "product": null,
+      "asn": "AS15169",
+      "org": "Google LLC",
+      "service_timestamp": {
+        "$date": "2025-08-11T11:26:53.781Z"
+      },
+      "ssl_versions": []
+    },
+    {
+      "port": 443,
+      "transport": "tcp",
+      "product": null,
+      "asn": "AS15169",
+      "org": "Google LLC",
+      "service_timestamp": {
+        "$date": "2025-08-11T10:46:21.420Z"
+      },
+      "ssl_versions": [
+        "-TLSv1",
+        "-SSLv2",
+        "-SSLv3",
+        "-TLSv1.1",
+        "TLSv1.2",
+        "TLSv1.3"
+      ]
+    }
+  ],
+  "source": "shodan_host_api",
+  "last_updated_at": {
+    "$date": "2025-08-11T17:59:37.759Z"
+  }
+}
+```
+## Example Output
+![Example Shodan ETL Output](images/example_output.png)
+![Example Shodan ETL Output](images/example_output_2.png)
