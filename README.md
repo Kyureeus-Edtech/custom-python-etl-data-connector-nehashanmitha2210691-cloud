@@ -4,12 +4,12 @@
 
 ---
 
-## 📌 Overview
+## Overview
 This ETL connector fetches data from the **Shodan Host API** for a list of IP addresses, transforms the nested JSON into a MongoDB-friendly format, and stores it in a dedicated MongoDB collection. It is designed for secure API key management, robust error handling, and repeatable ingestion without duplicates.
 
 ---
 
-## 🌐 API Details
+## API Details
 - **Provider:** Shodan
 - **Base URL:** `https://api.shodan.io`
 - **Endpoint:** `/shodan/host/{ip}`
@@ -21,7 +21,7 @@ This ETL connector fetches data from the **Shodan Host API** for a list of IP ad
 
 ---
 
-## 🔑 Authentication & Security
+## Authentication & Security
 1. Signing up at [https://account.shodan.io/register](https://account.shodan.io/register) to get API key.
 2. Storing it in a local `.env` file (not committed to Git).
 3. Example `.env`:
