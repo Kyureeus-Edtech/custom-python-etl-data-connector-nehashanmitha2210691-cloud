@@ -1,0 +1,13 @@
+# Shodan ETL Connector Environment Template
+
+# Shodan API key 
+SHODAN_API_KEY=your_shodan_api_key_here
+
+# MongoDB connection URI
+MONGO_URI=mongodb+srv://your_username:your_password@your_cluster.mongodb.net
+
+# MongoDB database name
+MONGO_DB=ssn_etl
+
+# Connector name 
+CONNECTOR_NAME=shodan_connector
