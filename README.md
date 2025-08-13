@@ -58,12 +58,53 @@ Upsert strategy based on IP address to avoid duplicates.
 
 ## Testing & Validation
 - **Invalid API key/IP → Skips with error message.**
+```
+if response.status_code != 200:
+    print(f"Error {response.status_code} for {ip}: {response.text}")
+    return None
+
+```
 - **Empty payloads → Skips insert.**
+```
+if not raw.get("data"):
+    print(f"No services found for {raw.get('ip_str')}, skipping insert.")
+    return None
+
+```
 - **Rate limit (HTTP 429) → Waits 60 seconds, retries.**
+```
+if response.status_code == 429:
+    print("Rate limit hit, sleeping 60 seconds...")
+    time.sleep(60)
+    continue
+```
 - **Connectivity errors → Retries up to 3 times.**
+```
+for attempt in range(3):
+    try:
+        response = requests.get(url, timeout=60)
+        # ... (rate limit + invalid response handling here)
+        return response.json()
+
+    except requests.exceptions.Timeout:
+        print(f"Timeout for {ip}, retrying ({attempt+1}/3)...")
+        time.sleep(5)
+
+    except requests.exceptions.RequestException as e:
+        print(f"Network error for {ip}: {e}")
+        return None
+```
 - **Consistent inserts → Uses update_one(..., upsert=True).**
+```
+collection.update_one(
+    {"ip": doc["ip"]},   # match on IP to avoid duplicates
+    {"$set": doc},       # update fields with new data
+    upsert=True          # insert if doesn't exist
+)
+```
 
 ## Input JSON:
+```
 {
     "region_code": "CA",
     "tags": [],
@@ -92,8 +133,9 @@ Upsert strategy based on IP address to avoid duplicates.
         53
     ]
 }
-
+```
 ## Output JSON:
+```
 {
   "_id": {
     "$oid": "6899af23d34128dcedf7053e"
@@ -161,7 +203,7 @@ Upsert strategy based on IP address to avoid duplicates.
     "$date": "2025-08-11T17:59:37.759Z"
   }
 }
-
+```
 ## Example Output
 ![Example Shodan ETL Output](images/example_output.png)
 ![Example Shodan ETL Output](images/example_output_2.png)
